@@ -1,0 +1,94 @@
+import { useEffect } from "react";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import { useNavigate, useParams } from "react-router-dom";
+import { use{{.Pascal}}, useCreate{{.Pascal}}, useUpdate{{.Pascal}} } from "./hooks";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+
+const schema = z.object({
+{{- range .Columns }}
+  {{.Name}}: {{.Zod}},
+{{- end }}
+});
+
+type FormValues = z.infer<typeof schema>;
+
+const defaults: FormValues = {
+{{- range .Columns }}
+  {{.Name}}: {{.TSDefault}},
+{{- end }}
+};
+
+export function {{.Pascal}}FormPage() {
+  const { id } = useParams();
+  const isEdit = Boolean(id);
+  const navigate = useNavigate();
+  const { data } = use{{.Pascal}}(id);
+  const create = useCreate{{.Pascal}}();
+  const update = useUpdate{{.Pascal}}();
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({ resolver: zodResolver(schema), defaultValues: defaults });
+
+  useEffect(() => {
+    if (data) {
+      reset({
+{{- range .Columns }}
+        {{.Name}}: data.{{.Name}},
+{{- end }}
+      });
+    }
+  }, [data, reset]);
+
+  const onSubmit = handleSubmit(async (values) => {
+    if (isEdit && id) {
+      await update.mutateAsync({ id, input: values });
+    } else {
+      await create.mutateAsync(values);
+    }
+    navigate("/{{.RoutePrefix}}");
+  });
+
+  return (
+    <div className="max-w-lg">
+      <Card>
+        <CardHeader>
+          <CardTitle>{isEdit ? "Edit" : "New"} {{.Pascal}}</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={onSubmit} className="flex flex-col gap-4" noValidate>
+{{- range .Columns }}
+            <div className="flex flex-col gap-1.5">
+              <Label htmlFor="{{.Name}}">{{.Label}}</Label>
+{{- if eq .InputType "checkbox" }}
+              <input id="{{.Name}}" type="checkbox" className="h-4 w-4" {...register("{{.Name}}")} />
+{{- else if eq .InputType "number" }}
+              <Input id="{{.Name}}" type="number" step="any" {...register("{{.Name}}", { valueAsNumber: true })} />
+{{- else }}
+              <Input id="{{.Name}}" type="text" {...register("{{.Name}}")} />
+{{- end }}
+              {errors.{{.Name}} && <p className="text-xs text-red-600">{errors.{{.Name}}.message}</p>}
+            </div>
+{{- end }}
+            <div className="flex gap-2">
+              <Button type="submit" disabled={isSubmitting}>
+                {isEdit ? "Save" : "Create"}
+              </Button>
+              <Button type="button" variant="outline" onClick={() => navigate("/{{.RoutePrefix}}")}>
+                Cancel
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}

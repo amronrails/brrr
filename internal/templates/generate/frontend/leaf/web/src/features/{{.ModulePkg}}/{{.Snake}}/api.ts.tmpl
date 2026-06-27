@@ -1,0 +1,35 @@
+import { api } from "@/lib/api/client";
+import type { {{.Pascal}}, {{.Pascal}}Input } from "./types";
+
+export interface {{.Pascal}}List {
+  data: {{.Pascal}}[];
+  total: number;
+  limit: number;
+  offset: number;
+}
+
+const base = "/{{.RoutePrefix}}";
+
+export function list{{.PluralPascal}}(params?: { limit?: number; offset?: number }): Promise<{{.Pascal}}List> {
+  const q = new URLSearchParams();
+  if (params?.limit != null) q.set("limit", String(params.limit));
+  if (params?.offset != null) q.set("offset", String(params.offset));
+  const qs = q.toString();
+  return api<{{.Pascal}}List>(qs ? `${base}?${qs}` : base);
+}
+
+export function get{{.Pascal}}(id: string): Promise<{{.Pascal}}> {
+  return api<{{.Pascal}}>(`${base}/${id}`);
+}
+
+export function create{{.Pascal}}(input: {{.Pascal}}Input): Promise<{{.Pascal}}> {
+  return api<{{.Pascal}}>(base, { method: "POST", body: JSON.stringify(input) });
+}
+
+export function update{{.Pascal}}(id: string, input: {{.Pascal}}Input): Promise<{{.Pascal}}> {
+  return api<{{.Pascal}}>(`${base}/${id}`, { method: "PUT", body: JSON.stringify(input) });
+}
+
+export function delete{{.Pascal}}(id: string): Promise<void> {
+  return api<void>(`${base}/${id}`, { method: "DELETE" });
+}

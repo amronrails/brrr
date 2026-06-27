@@ -1,0 +1,14 @@
+export interface {{.Pascal}} {
+  id: string;
+{{- range .Columns }}
+  {{.Name}}: {{.TSType}};
+{{- end }}
+  created_at: string;
+  updated_at: string;
+}
+
+export interface {{.Pascal}}Input {
+{{- range .Columns }}
+  {{.Name}}: {{.TSType}};
+{{- end }}
+}

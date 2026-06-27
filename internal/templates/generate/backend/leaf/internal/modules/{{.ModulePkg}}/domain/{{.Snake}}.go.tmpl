@@ -1,0 +1,51 @@
+// Package domain holds the {{.Module}} module's entities and repository
+// contracts.
+package domain
+
+import (
+	"context"
+{{- if .HasJSON }}
+	"encoding/json"
+{{- end }}
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// {{.Pascal}} is the {{.Snake}} entity.
+type {{.Pascal}} struct {
+	ID uuid.UUID
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Create{{.Pascal}}Input carries the data needed to create a {{.Snake}}.
+type Create{{.Pascal}}Input struct {
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+}
+
+// Update{{.Pascal}}Input carries the data needed to update a {{.Snake}}.
+type Update{{.Pascal}}Input struct {
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+}
+
+// Err{{.Pascal}}NotFound is returned when a {{.Snake}} does not exist.
+var Err{{.Pascal}}NotFound = errors.New("{{.Snake}} not found")
+
+// {{.Pascal}}Repository is the persistence contract for {{.Plural}}.
+type {{.Pascal}}Repository interface {
+	Create(ctx context.Context, in Create{{.Pascal}}Input) ({{.Pascal}}, error)
+	Get(ctx context.Context, id uuid.UUID) ({{.Pascal}}, error)
+	List(ctx context.Context, limit, offset int32) ([]{{.Pascal}}, error)
+	Count(ctx context.Context) (int64, error)
+	Update(ctx context.Context, id uuid.UUID, in Update{{.Pascal}}Input) ({{.Pascal}}, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}

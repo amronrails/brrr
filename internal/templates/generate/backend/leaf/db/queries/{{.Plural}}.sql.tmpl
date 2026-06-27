@@ -1,0 +1,23 @@
+-- name: Create{{.Pascal}} :one
+INSERT INTO {{.Table}} ({{range $i, $c := .Columns}}{{if $i}}, {{end}}{{$c.Name}}{{end}})
+VALUES ({{range $i, $c := .Columns}}{{if $i}}, {{end}}${{add $i 1}}{{end}})
+RETURNING *;
+
+-- name: Get{{.Pascal}} :one
+SELECT * FROM {{.Table}} WHERE id = $1;
+
+-- name: List{{.PluralPascal}} :many
+SELECT * FROM {{.Table}}
+ORDER BY created_at DESC
+LIMIT $1 OFFSET $2;
+
+-- name: Count{{.PluralPascal}} :one
+SELECT count(*) FROM {{.Table}};
+
+-- name: Update{{.Pascal}} :one
+UPDATE {{.Table}} SET {{range $i, $c := .Columns}}{{$c.Name}} = ${{add $i 2}}, {{end}}updated_at = now()
+WHERE id = $1
+RETURNING *;
+
+-- name: Delete{{.Pascal}} :exec
+DELETE FROM {{.Table}} WHERE id = $1;

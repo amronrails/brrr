@@ -1,0 +1,62 @@
+ifneq (,$(wildcard .env))
+include .env
+export
+endif
+
+GOOSE := go run github.com/pressly/goose/v3/cmd/goose@latest
+SQLC  := go run github.com/sqlc-dev/sqlc/cmd/sqlc@latest
+
+.PHONY: help
+help: ## Show available targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
+
+.PHONY: setup
+setup: tidy sqlc web-install ## Install all deps and generate code
+
+.PHONY: tidy
+tidy: ## Resolve Go module dependencies
+	go mod tidy
+
+.PHONY: sqlc
+sqlc: ## Generate type-safe DB code from SQL
+	$(SQLC) generate
+
+.PHONY: web-install
+web-install: ## Install frontend dependencies
+	cd web && npm install
+
+.PHONY: db-up
+db-up: ## Start Postgres in Docker
+	docker compose up -d postgres
+
+.PHONY: db-down
+db-down: ## Stop Postgres
+	docker compose down
+
+.PHONY: migrate
+migrate: ## Apply all database migrations
+	$(GOOSE) -dir db/migrations postgres "$(DATABASE_URL)" up
+
+.PHONY: migrate-down
+migrate-down: ## Roll back the most recent migration
+	$(GOOSE) -dir db/migrations postgres "$(DATABASE_URL)" down
+
+.PHONY: run
+run: ## Run the backend server
+	go run ./cmd/server
+
+.PHONY: web
+web: ## Run the frontend dev server
+	cd web && npm run dev
+
+.PHONY: dev
+dev: ## Run backend and frontend together
+	@$(MAKE) -j2 run web
+
+.PHONY: build
+build: ## Build the backend binary into bin/server
+	go build -o bin/server ./cmd/server
+
+.PHONY: test
+test: ## Run Go tests
+	go test ./...

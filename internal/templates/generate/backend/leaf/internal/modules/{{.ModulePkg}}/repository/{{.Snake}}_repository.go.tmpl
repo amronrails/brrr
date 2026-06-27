@@ -1,0 +1,93 @@
+// Package repository implements the {{.Module}} module's persistence contracts
+// on top of the sqlc-generated query layer.
+package repository
+
+import (
+	"context"
+	"errors"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+
+	"{{.ModulePath}}/internal/db"
+	"{{.ModulePath}}/internal/modules/{{.ModulePkg}}/domain"
+)
+
+type {{.Camel}}Repository struct {
+	q *db.Queries
+}
+
+// New{{.Pascal}}Repository constructs a {{.Pascal}}Repository.
+func New{{.Pascal}}Repository(q *db.Queries) domain.{{.Pascal}}Repository {
+	return &{{.Camel}}Repository{q: q}
+}
+
+func (r *{{.Camel}}Repository) Create(ctx context.Context, in domain.Create{{.Pascal}}Input) (domain.{{.Pascal}}, error) {
+	row, err := r.q.Create{{.Pascal}}(ctx, db.Create{{.Pascal}}Params{
+{{- range .Columns }}
+		{{.GoName}}: in.{{.GoName}},
+{{- end }}
+	})
+	if err != nil {
+		return domain.{{.Pascal}}{}, err
+	}
+	return to{{.Pascal}}(row), nil
+}
+
+func (r *{{.Camel}}Repository) Get(ctx context.Context, id uuid.UUID) (domain.{{.Pascal}}, error) {
+	row, err := r.q.Get{{.Pascal}}(ctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+		}
+		return domain.{{.Pascal}}{}, err
+	}
+	return to{{.Pascal}}(row), nil
+}
+
+func (r *{{.Camel}}Repository) List(ctx context.Context, limit, offset int32) ([]domain.{{.Pascal}}, error) {
+	rows, err := r.q.List{{.PluralPascal}}(ctx, db.List{{.PluralPascal}}Params{Limit: limit, Offset: offset})
+	if err != nil {
+		return nil, err
+	}
+	out := make([]domain.{{.Pascal}}, 0, len(rows))
+	for _, row := range rows {
+		out = append(out, to{{.Pascal}}(row))
+	}
+	return out, nil
+}
+
+func (r *{{.Camel}}Repository) Count(ctx context.Context) (int64, error) {
+	return r.q.Count{{.PluralPascal}}(ctx)
+}
+
+func (r *{{.Camel}}Repository) Update(ctx context.Context, id uuid.UUID, in domain.Update{{.Pascal}}Input) (domain.{{.Pascal}}, error) {
+	row, err := r.q.Update{{.Pascal}}(ctx, db.Update{{.Pascal}}Params{
+		ID: id,
+{{- range .Columns }}
+		{{.GoName}}: in.{{.GoName}},
+{{- end }}
+	})
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return domain.{{.Pascal}}{}, domain.Err{{.Pascal}}NotFound
+		}
+		return domain.{{.Pascal}}{}, err
+	}
+	return to{{.Pascal}}(row), nil
+}
+
+func (r *{{.Camel}}Repository) Delete(ctx context.Context, id uuid.UUID) error {
+	return r.q.Delete{{.Pascal}}(ctx, id)
+}
+
+func to{{.Pascal}}(row db.{{.Pascal}}) domain.{{.Pascal}} {
+	return domain.{{.Pascal}}{
+		ID: row.ID,
+{{- range .Columns }}
+		{{.GoName}}: row.{{.GoName}},
+{{- end }}
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}
+}

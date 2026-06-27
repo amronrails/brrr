@@ -1,0 +1,29 @@
+import { createBrowserRouter } from "react-router-dom";
+import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { DashboardLayout } from "@/components/layout/DashboardLayout";
+import { LoginPage } from "@/features/auth/LoginPage";
+import { RegisterPage } from "@/features/auth/RegisterPage";
+import { DashboardPage } from "@/features/dashboard/DashboardPage";
+import { UsersPage } from "@/features/users/UsersPage";
+// brrr:imports-fe
+
+export const router = createBrowserRouter([
+  { path: "/login", element: <LoginPage /> },
+  { path: "/register", element: <RegisterPage /> },
+  {
+    element: <ProtectedRoute />,
+    children: [
+      {
+        element: <DashboardLayout />,
+        children: [
+          { index: true, element: <DashboardPage /> },
+          {
+            element: <ProtectedRoute requireAdmin />,
+            children: [{ path: "users", element: <UsersPage /> }],
+          },
+          // brrr:routes-fe
+        ],
+      },
+    ],
+  },
+]);

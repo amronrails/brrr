@@ -1,0 +1,45 @@
+// Package user assembles the user/auth module from its layers and exposes it as
+// a mountable Module.
+package user
+
+import (
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
+
+	"{{.ModulePath}}/internal/db"
+	"{{.ModulePath}}/internal/modules/user/repository"
+	"{{.ModulePath}}/internal/modules/user/service"
+	userhttp "{{.ModulePath}}/internal/modules/user/transport/http"
+	"{{.ModulePath}}/internal/platform/auth"
+)
+
+// Deps are the user module's construction dependencies.
+type Deps struct {
+	Queries   *db.Queries
+	Tokens    *auth.TokenService
+	Validator *validator.Validate
+}
+
+// Module is the user/auth feature module.
+type Module struct {
+	handler *userhttp.Handler
+	tokens  *auth.TokenService
+}
+
+// New wires the module's repository, service and handler together.
+func New(d Deps) *Module {
+	repo := repository.New(d.Queries)
+	svc := service.New(repo, d.Tokens)
+	return &Module{
+		handler: userhttp.NewHandler(svc, d.Validator),
+		tokens:  d.Tokens,
+	}
+}
+
+// Name identifies the module.
+func (m *Module) Name() string { return "user" }
+
+// RegisterRoutes mounts the module under the provided router.
+func (m *Module) RegisterRoutes(r chi.Router) {
+	m.handler.RegisterRoutes(r, m.tokens)
+}
