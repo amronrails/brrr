@@ -1,0 +1,57 @@
+import { NavLink, Outlet, useNavigate } from "react-router-dom";
+import { useAuth } from "@/features/auth";
+import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
+
+function navItemClass({ isActive }: { isActive: boolean }) {
+  return cn(
+    "block rounded-md px-3 py-2 text-sm font-medium transition-colors",
+    isActive ? "bg-neutral-900 text-white" : "text-neutral-600 hover:bg-neutral-100",
+  );
+}
+
+export function DashboardLayout() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+  const isAdmin = user?.role === "admin";
+
+  const onLogout = async () => {
+    await logout();
+    navigate("/login");
+  };
+
+  return (
+    <div className="flex min-h-screen bg-neutral-50">
+      <aside className="flex w-60 flex-col border-r border-neutral-200 bg-white">
+        <div className="px-6 py-5 text-lg font-semibold">Shop</div>
+        <nav className="flex flex-1 flex-col gap-1 px-3">
+          <NavLink to="/" end className={navItemClass}>
+            Dashboard
+          </NavLink>
+          {isAdmin && (
+            <NavLink to="/users" className={navItemClass}>
+              Users
+            </NavLink>
+          )}
+          <NavLink to="/catalog/categories" className={navItemClass}>Categories</NavLink>
+          <NavLink to="/catalog/products" className={navItemClass}>Products</NavLink>
+          <NavLink to="/sales/orders" className={navItemClass}>Orders</NavLink>
+          <NavLink to="/sales/order-items" className={navItemClass}>Order Items</NavLink>
+          {/* brrr:nav */}
+        </nav>
+      </aside>
+
+      <div className="flex flex-1 flex-col">
+        <header className="flex items-center justify-between border-b border-neutral-200 bg-white px-6 py-3">
+          <span className="text-sm text-neutral-500">{user?.email}</span>
+          <Button variant="outline" size="sm" onClick={onLogout}>
+            Sign out
+          </Button>
+        </header>
+        <main className="flex-1 p-6">
+          <Outlet />
+        </main>
+      </div>
+    </div>
+  );
+}

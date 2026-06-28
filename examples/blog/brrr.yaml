@@ -1,0 +1,10 @@
+name: blog
+module: github.com/example/blog
+modules:
+    blog:
+        models:
+            - Post
+            - Comment
+    user:
+        models:
+            - User

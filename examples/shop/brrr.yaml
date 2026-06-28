@@ -1,0 +1,14 @@
+name: shop
+module: github.com/example/shop
+modules:
+    catalog:
+        models:
+            - Category
+            - Product
+    sales:
+        models:
+            - Order
+            - OrderItem
+    user:
+        models:
+            - User

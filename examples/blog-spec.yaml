@@ -1,0 +1,21 @@
+# Blog — posts with comments, authored by users.
+modules:
+  blog:
+    models:
+      Post:
+        fields:
+          title: string required
+          slug: string required unique
+          excerpt: text
+          body: text
+          published: bool
+          views: int
+        relationships:
+          author: belongs_to User
+      Comment:
+        fields:
+          body: text required
+          approved: bool
+        relationships:
+          post: belongs_to Post
+          author: belongs_to User

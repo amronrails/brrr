@@ -9,13 +9,21 @@ A Go modular monolith ({{.ModulePath}}) with a React admin frontend, generated b
 
 ## Architecture
 
-A modular monolith: each feature lives under `internal/modules/<name>` as a layered slice.
+A modular monolith using ports & adapters. Each feature lives under
+`internal/modules/<name>` as a vertical slice with a public `module.go` facade
+and a private `internal/` package; dependencies point inward.
 
 ```
-domain  →  repository  →  service  →  transport/http
-(entities,  (sqlc-backed   (business    (handlers,
- contracts)  persistence)   logic)       routes, DTOs)
+adapters/http ─┐
+               ├─→  services  →  ports  →  domain
+adapters/postgres ─┘            (interfaces) (entities,
+(handlers,        (sqlc-backed   the services  value objects,
+ DTOs / repos)     persistence)   depend on)    errors — pure)
 ```
+
+The only public surface of a module is `module.go`, which wires the slice and is
+mounted via `internal/modules/registry.go`. See [AGENTS.md](AGENTS.md) for the
+full layout and conventions.
 
 The built-in **user** module provides email/password auth with short-lived JWT
 access tokens and rotating, server-revocable refresh tokens. The first account
@@ -48,5 +56,5 @@ Open http://localhost:5173 and register the first user — they become admin.
 
 ```sh
 brrr generate <module> <Model> field:type ...   # scaffold CRUD (backend + frontend)
-brrr apply spec.yaml                            # generate from a YAML spec
+brrr init <app> --spec spec.yaml                 # scaffold a whole app from a YAML spec
 ```

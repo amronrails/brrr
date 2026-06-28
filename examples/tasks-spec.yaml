@@ -1,0 +1,25 @@
+# Tasks — projects, tasks and labels (a lightweight tracker).
+modules:
+  projects:
+    models:
+      Project:
+        fields:
+          name: string required
+          key: string required unique
+          description: text
+          archived: bool
+      Task:
+        fields:
+          title: string required
+          description: text
+          status: string required
+          priority: int
+          due_date: date
+          done: bool
+        relationships:
+          project: belongs_to Project
+          assignee: belongs_to User
+      Label:
+        fields:
+          name: string required unique
+          color: string

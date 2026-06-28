@@ -1,10 +1,8 @@
 import { createBrowserRouter } from "react-router-dom";
-import { ProtectedRoute } from "@/features/auth/ProtectedRoute";
+import { ProtectedRoute, LoginPage, RegisterPage } from "@/features/auth";
 import { DashboardLayout } from "@/components/layout/DashboardLayout";
-import { LoginPage } from "@/features/auth/LoginPage";
-import { RegisterPage } from "@/features/auth/RegisterPage";
-import { DashboardPage } from "@/features/dashboard/DashboardPage";
-import { UsersPage } from "@/features/users/UsersPage";
+import { DashboardPage } from "@/features/dashboard";
+import { UsersPage } from "@/features/users";
 // brrr:imports-fe
 
 export const router = createBrowserRouter([

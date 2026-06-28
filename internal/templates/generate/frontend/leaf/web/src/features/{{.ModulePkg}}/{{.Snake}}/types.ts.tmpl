@@ -1,7 +1,7 @@
 export interface {{.Pascal}} {
   id: string;
 {{- range .Columns }}
-  {{.Name}}: {{.TSType}};
+  {{.Name}}{{if .TSOptional}}?{{end}}: {{.TSType}};
 {{- end }}
   created_at: string;
   updated_at: string;
@@ -9,6 +9,6 @@ export interface {{.Pascal}} {
 
 export interface {{.Pascal}}Input {
 {{- range .Columns }}
-  {{.Name}}: {{.TSType}};
+  {{.Name}}{{if .TSOptional}}?{{end}}: {{.TSType}};
 {{- end }}
 }

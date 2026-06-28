@@ -1,0 +1,55 @@
+// This file declares the user module's PUBLIC API: the contract other modules
+// use to talk to it. Siblings depend on this interface (and the public DTOs
+// here), never on the module's internal/ packages. *Module implements it, and
+// is handed to consumers as a user.API in internal/modules/registry.go.
+package user
+
+import (
+	"context"
+	"time"
+
+	"github.com/google/uuid"
+
+	"github.com/example/shop/internal/modules/user/internal/domain"
+)
+
+// User is the public, cross-module representation of an account. It deliberately
+// omits sensitive fields such as the password hash.
+type User struct {
+	ID        uuid.UUID
+	Email     string
+	Name      string
+	Role      string
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// API is the user module's public contract. A consuming module declares a
+// dependency on this interface (typically as a field in its own Deps/ports) and
+// receives the user Module at wiring time.
+type API interface {
+	ByID(ctx context.Context, id uuid.UUID) (User, error)
+}
+
+// Compile-time guarantee that the module satisfies its own public API.
+var _ API = (*Module)(nil)
+
+// ByID returns the account with the given id.
+func (m *Module) ByID(ctx context.Context, id uuid.UUID) (User, error) {
+	u, err := m.svc.Me(ctx, id)
+	if err != nil {
+		return User{}, err
+	}
+	return toAPIUser(u), nil
+}
+
+func toAPIUser(u domain.User) User {
+	return User{
+		ID:        u.ID,
+		Email:     u.Email,
+		Name:      u.Name,
+		Role:      string(u.Role),
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	}
+}

@@ -1,0 +1,43 @@
+// Package domain holds the {{.Module}} module's entities and value objects.
+package domain
+
+import (
+{{- if .HasJSON }}
+	"encoding/json"
+{{- end }}
+	"errors"
+	"time"
+
+	"github.com/google/uuid"
+)
+
+// {{.Pascal}} is the {{.Snake}} entity.
+type {{.Pascal}} struct {
+	ID uuid.UUID
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// Create{{.Pascal}}Input carries the data needed to create a {{.Snake}}.
+type Create{{.Pascal}}Input struct {
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+}
+
+// Update{{.Pascal}}Input carries the data needed to update a {{.Snake}}.
+type Update{{.Pascal}}Input struct {
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+}
+
+// Err{{.Pascal}}NotFound is returned when a {{.Snake}} does not exist.
+var Err{{.Pascal}}NotFound = errors.New("{{.Snake}} not found")
+
+// Err{{.Pascal}}Conflict is returned when a {{.Snake}} violates a unique
+// constraint (e.g. a duplicate value in a unique column).
+var Err{{.Pascal}}Conflict = errors.New("{{.Snake}} already exists")

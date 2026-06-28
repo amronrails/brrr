@@ -1,0 +1,34 @@
+# Shop — catalog (products/categories) and sales (orders), multi-module.
+modules:
+  catalog:
+    models:
+      Category:
+        fields:
+          name: string required
+          slug: string required unique
+      Product:
+        fields:
+          name: string required
+          sku: string required unique
+          price: decimal required
+          stock: int
+          active: bool
+          metadata: json
+        relationships:
+          category: belongs_to Category
+  sales:
+    models:
+      Order:
+        fields:
+          status: string required
+          total: decimal required
+          placed_at: datetime
+        relationships:
+          customer: belongs_to User
+      OrderItem:
+        fields:
+          quantity: int required
+          unit_price: decimal required
+        relationships:
+          order: belongs_to Order
+          product: belongs_to Product

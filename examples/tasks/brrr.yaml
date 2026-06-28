@@ -1,0 +1,11 @@
+name: tasks
+module: github.com/example/tasks
+modules:
+    projects:
+        models:
+            - Project
+            - Task
+            - Label
+    user:
+        models:
+            - User

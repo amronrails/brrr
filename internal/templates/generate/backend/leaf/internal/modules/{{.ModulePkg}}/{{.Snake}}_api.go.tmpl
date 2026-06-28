@@ -1,0 +1,46 @@
+// {{.Pascal}} public API DTO and accessor — the cross-module surface for
+// {{.Plural}}. Generated once by brrr; safe to extend by hand (the aggregate
+// interface lives in api.go and is regenerated).
+package {{.ModulePkg}}
+
+import (
+	"context"
+{{- if .HasJSON }}
+	"encoding/json"
+{{- end }}
+	"time"
+
+	"github.com/google/uuid"
+
+	"{{.ModulePath}}/internal/modules/{{.ModulePkg}}/internal/domain"
+)
+
+// {{.Pascal}} is the public, cross-module representation of a {{.Snake}}.
+type {{.Pascal}} struct {
+	ID uuid.UUID
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}}
+{{- end }}
+	CreatedAt time.Time
+	UpdatedAt time.Time
+}
+
+// {{.Pascal}}ByID returns the {{.Snake}} with the given id.
+func (m *Module) {{.Pascal}}ByID(ctx context.Context, id uuid.UUID) ({{.Pascal}}, error) {
+	e, err := m.{{.Camel}}Svc.Get(ctx, id)
+	if err != nil {
+		return {{.Pascal}}{}, err
+	}
+	return toAPI{{.Pascal}}(e), nil
+}
+
+func toAPI{{.Pascal}}(e domain.{{.Pascal}}) {{.Pascal}} {
+	return {{.Pascal}}{
+		ID: e.ID,
+{{- range .Columns }}
+		{{.GoName}}: e.{{.GoName}},
+{{- end }}
+		CreatedAt: e.CreatedAt,
+		UpdatedAt: e.UpdatedAt,
+	}
+}

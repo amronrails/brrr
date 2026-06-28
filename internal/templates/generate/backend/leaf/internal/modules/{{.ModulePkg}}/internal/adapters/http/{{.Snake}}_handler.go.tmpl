@@ -1,0 +1,176 @@
+// Package {{.HTTPPkg}} is the {{.Module}} module's HTTP transport layer.
+package {{.HTTPPkg}}
+
+import (
+{{- if .HasJSON }}
+	"encoding/json"
+{{- end }}
+	"errors"
+	"net/http"
+	"time"
+
+	"github.com/go-chi/chi/v5"
+	"github.com/go-playground/validator/v10"
+	"github.com/google/uuid"
+
+	"{{.ModulePath}}/internal/modules/{{.ModulePkg}}/internal/domain"
+	"{{.ModulePath}}/internal/modules/{{.ModulePkg}}/internal/services"
+	"{{.ModulePath}}/internal/platform/auth"
+	"{{.ModulePath}}/internal/platform/httpx"
+)
+
+type {{.Camel}}Request struct {
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}} `json:"{{.Name}}"{{if .ValidateTag}} validate:"{{.ValidateTag}}"{{end}}`
+{{- end }}
+}
+
+type {{.Camel}}Response struct {
+	ID string `json:"id"`
+{{- range .Columns }}
+	{{.GoName}} {{.GoType}} `json:"{{.Name}}"`
+{{- end }}
+	CreatedAt time.Time `json:"created_at"`
+	UpdatedAt time.Time `json:"updated_at"`
+}
+
+func to{{.Pascal}}Response(m domain.{{.Pascal}}) {{.Camel}}Response {
+	return {{.Camel}}Response{
+		ID: m.ID.String(),
+{{- range .Columns }}
+		{{.GoName}}: m.{{.GoName}},
+{{- end }}
+		CreatedAt: m.CreatedAt,
+		UpdatedAt: m.UpdatedAt,
+	}
+}
+
+// {{.Pascal}}Handler exposes CRUD endpoints for {{.Plural}}.
+type {{.Pascal}}Handler struct {
+	svc      *services.{{.Pascal}}Service
+	validate *validator.Validate
+}
+
+// New{{.Pascal}}Handler constructs a {{.Pascal}}Handler.
+func New{{.Pascal}}Handler(svc *services.{{.Pascal}}Service, validate *validator.Validate) *{{.Pascal}}Handler {
+	return &{{.Pascal}}Handler{svc: svc, validate: validate}
+}
+
+func (h *{{.Pascal}}Handler) create(w http.ResponseWriter, r *http.Request) {
+	var req {{.Camel}}Request
+	if err := httpx.Decode(r, &req); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		httpx.ValidationError(w, err)
+		return
+	}
+	m, err := h.svc.Create(r.Context(), domain.Create{{.Pascal}}Input{
+{{- range .Columns }}
+		{{.GoName}}: req.{{.GoName}},
+{{- end }}
+	})
+	if err != nil {
+		write{{.Pascal}}Error(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusCreated, to{{.Pascal}}Response(m))
+}
+
+func (h *{{.Pascal}}Handler) list(w http.ResponseWriter, r *http.Request) {
+	limit := httpx.QueryInt(r, "limit", 20)
+	offset := httpx.QueryInt(r, "offset", 0)
+	items, total, err := h.svc.List(r.Context(), int32(limit), int32(offset))
+	if err != nil {
+		write{{.Pascal}}Error(w, err)
+		return
+	}
+	out := make([]{{.Camel}}Response, 0, len(items))
+	for _, m := range items {
+		out = append(out, to{{.Pascal}}Response(m))
+	}
+	httpx.JSON(w, http.StatusOK, map[string]any{
+		"data":   out,
+		"total":  total,
+		"limit":  limit,
+		"offset": offset,
+	})
+}
+
+func (h *{{.Pascal}}Handler) get(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	m, err := h.svc.Get(r.Context(), id)
+	if err != nil {
+		write{{.Pascal}}Error(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, to{{.Pascal}}Response(m))
+}
+
+func (h *{{.Pascal}}Handler) update(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	var req {{.Camel}}Request
+	if err := httpx.Decode(r, &req); err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid request body")
+		return
+	}
+	if err := h.validate.Struct(req); err != nil {
+		httpx.ValidationError(w, err)
+		return
+	}
+	m, err := h.svc.Update(r.Context(), id, domain.Update{{.Pascal}}Input{
+{{- range .Columns }}
+		{{.GoName}}: req.{{.GoName}},
+{{- end }}
+	})
+	if err != nil {
+		write{{.Pascal}}Error(w, err)
+		return
+	}
+	httpx.JSON(w, http.StatusOK, to{{.Pascal}}Response(m))
+}
+
+func (h *{{.Pascal}}Handler) delete(w http.ResponseWriter, r *http.Request) {
+	id, err := uuid.Parse(chi.URLParam(r, "id"))
+	if err != nil {
+		httpx.Error(w, http.StatusBadRequest, "invalid id")
+		return
+	}
+	if err := h.svc.Delete(r.Context(), id); err != nil {
+		write{{.Pascal}}Error(w, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
+}
+
+// RegisterRoutes mounts the {{.Snake}} CRUD endpoints (all require auth).
+func (h *{{.Pascal}}Handler) RegisterRoutes(r chi.Router, tokens *auth.TokenService) {
+	r.Group(func(r chi.Router) {
+		r.Use(tokens.RequireAuth)
+		r.Post("/{{.RoutePrefix}}", h.create)
+		r.Get("/{{.RoutePrefix}}", h.list)
+		r.Get("/{{.RoutePrefix}}/{id}", h.get)
+		r.Put("/{{.RoutePrefix}}/{id}", h.update)
+		r.Delete("/{{.RoutePrefix}}/{id}", h.delete)
+	})
+}
+
+func write{{.Pascal}}Error(w http.ResponseWriter, err error) {
+	switch {
+	case errors.Is(err, domain.Err{{.Pascal}}NotFound):
+		httpx.Error(w, http.StatusNotFound, err.Error())
+	case errors.Is(err, domain.Err{{.Pascal}}Conflict):
+		httpx.Error(w, http.StatusConflict, err.Error())
+	default:
+		httpx.Error(w, http.StatusInternalServerError, "internal server error")
+	}
+}

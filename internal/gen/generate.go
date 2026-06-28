@@ -77,11 +77,15 @@ func Generate(root, module string, model string, fieldArgs []string) (*Result, e
 	// 2. Update the manifest in memory so module.go reflects the new model.
 	manifest.AddModel(module, modelName)
 
-	// 3. (Re)generate the module's wiring file from the full model list.
+	// 3. (Re)generate the module's wiring + public API files from the full model
+	//    list, so other modules can depend on this one through its interface.
 	if err := regenerateModule(root, manifest, module); err != nil {
 		return nil, err
 	}
-	res.Files = append(res.Files, filepath.Join("internal/modules", view.ModulePkg, "module.go"))
+	res.Files = append(res.Files,
+		filepath.Join("internal/modules", view.ModulePkg, "module.go"),
+		filepath.Join("internal/modules", view.ModulePkg, "api.go"),
+	)
 
 	// 4. Wire the module into the registry (only needed once per module).
 	if newModule {
@@ -116,19 +120,30 @@ func regenerateModule(root string, manifest *project.Manifest, module string) er
 			Camel:  engine.Camel(name),
 		})
 	}
-	content, err := templates.GenerateFile("backend/module.go.tmpl")
-	if err != nil {
-		return err
+	// Both files are aggregates over the module's full model list: module.go
+	// wires and mounts the slice; api.go declares the public contract other
+	// modules depend on. Per-model detail lives in the leaf files.
+	for tmpl, out := range map[string]string{
+		"backend/module.go.tmpl": "module.go",
+		"backend/api.go.tmpl":    "api.go",
+	} {
+		content, err := templates.GenerateFile(tmpl)
+		if err != nil {
+			return err
+		}
+		rendered, err := engine.RenderBytes(out, content, view)
+		if err != nil {
+			return err
+		}
+		dst := filepath.Join(root, "internal", "modules", view.ModulePkg, out)
+		if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
+			return err
+		}
+		if err := os.WriteFile(dst, rendered, 0o644); err != nil {
+			return err
+		}
 	}
-	out, err := engine.RenderBytes("module.go", content, view)
-	if err != nil {
-		return err
-	}
-	dst := filepath.Join(root, "internal", "modules", view.ModulePkg, "module.go")
-	if err := os.MkdirAll(filepath.Dir(dst), 0o755); err != nil {
-		return err
-	}
-	return os.WriteFile(dst, out, 0o644)
+	return nil
 }
 
 func wireRegistry(root string, v *ModelView) error {
@@ -137,17 +152,22 @@ func wireRegistry(root string, v *ModelView) error {
 		fmt.Sprintf("%q", v.ModulePath+"/internal/modules/"+v.ModulePkg)); err != nil {
 		return err
 	}
-	line := fmt.Sprintf("%s.New(%s.Deps{Queries: d.Queries, Tokens: d.Tokens, Validator: d.Validator}),", v.ModulePkg, v.ModulePkg)
-	_, err := engine.Inject(registry, "// brrr:modules", line)
+	// Phase 1: construct the module into a named provider variable, so other
+	// modules can be handed its public API at wiring time.
+	construct := fmt.Sprintf("%sMod := %s.New(%s.Deps{Queries: d.Queries, Tokens: d.Tokens, Validator: d.Validator})", v.ModulePkg, v.ModulePkg, v.ModulePkg)
+	if _, err := engine.Inject(registry, "// brrr:module-construct", construct); err != nil {
+		return err
+	}
+	// Phase 2: add the provider to the mounted list.
+	_, err := engine.Inject(registry, "// brrr:modules", v.ModulePkg+"Mod,")
 	return err
 }
 
 func wireFrontend(root string, v *ModelView) error {
 	router := filepath.Join(root, "web", "src", "router.tsx")
 	imports := fmt.Sprintf(
-		"import { %sListPage } from \"@/features/%s/%s/%sListPage\";\nimport { %sFormPage } from \"@/features/%s/%s/%sFormPage\";",
-		v.Pascal, v.ModulePkg, v.Snake, v.Pascal,
-		v.Pascal, v.ModulePkg, v.Snake, v.Pascal,
+		"import { %sListPage, %sFormPage } from \"@/features/%s/%s\";",
+		v.Pascal, v.Pascal, v.ModulePkg, v.Snake,
 	)
 	if _, err := engine.Inject(router, "// brrr:imports-fe", imports); err != nil {
 		return err

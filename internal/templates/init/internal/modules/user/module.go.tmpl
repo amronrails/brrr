@@ -7,9 +7,9 @@ import (
 	"github.com/go-playground/validator/v10"
 
 	"{{.ModulePath}}/internal/db"
-	"{{.ModulePath}}/internal/modules/user/repository"
-	"{{.ModulePath}}/internal/modules/user/service"
-	userhttp "{{.ModulePath}}/internal/modules/user/transport/http"
+	userhttp "{{.ModulePath}}/internal/modules/user/internal/adapters/http"
+	"{{.ModulePath}}/internal/modules/user/internal/adapters/postgres"
+	"{{.ModulePath}}/internal/modules/user/internal/services"
 	"{{.ModulePath}}/internal/platform/auth"
 )
 
@@ -20,17 +20,20 @@ type Deps struct {
 	Validator *validator.Validate
 }
 
-// Module is the user/auth feature module.
+// Module is the user/auth feature module. It also implements the module's public
+// API (see api.go), the contract other modules use to reach it.
 type Module struct {
+	svc     *services.Service
 	handler *userhttp.Handler
 	tokens  *auth.TokenService
 }
 
-// New wires the module's repository, service and handler together.
+// New wires the module's postgres adapter, services and handler together.
 func New(d Deps) *Module {
-	repo := repository.New(d.Queries)
-	svc := service.New(repo, d.Tokens)
+	repo := postgres.New(d.Queries)
+	svc := services.New(repo, d.Tokens)
 	return &Module{
+		svc:     svc,
 		handler: userhttp.NewHandler(svc, d.Validator),
 		tokens:  d.Tokens,
 	}

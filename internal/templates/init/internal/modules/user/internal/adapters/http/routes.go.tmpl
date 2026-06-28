@@ -1,0 +1,30 @@
+package userhttp
+
+import (
+	"github.com/go-chi/chi/v5"
+
+	"{{.ModulePath}}/internal/modules/user/internal/domain"
+	"{{.ModulePath}}/internal/platform/auth"
+)
+
+// RegisterRoutes mounts the user module's routes. Public auth endpoints live
+// under /auth; admin-only endpoints under /admin are gated by RequireRole.
+func (h *Handler) RegisterRoutes(r chi.Router, tokens *auth.TokenService) {
+	r.Route("/auth", func(r chi.Router) {
+		r.Post("/register", h.register)
+		r.Post("/login", h.login)
+		r.Post("/refresh", h.refresh)
+		r.Post("/logout", h.logout)
+
+		r.Group(func(r chi.Router) {
+			r.Use(tokens.RequireAuth)
+			r.Get("/me", h.me)
+		})
+	})
+
+	r.Route("/admin", func(r chi.Router) {
+		r.Use(tokens.RequireAuth)
+		r.Use(auth.RequireRole(string(domain.RoleAdmin)))
+		r.Get("/users", h.listUsers)
+	})
+}

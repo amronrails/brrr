@@ -26,6 +26,7 @@ type Column struct {
 	RefTable   string // referenced table for relation columns, e.g. "users"
 
 	TSType      string // TypeScript type: "string" | "number" | "boolean"
+	TSOptional  bool   // render the TS property as optional (e.g. json -> z.unknown())
 	TSDefault   string // TypeScript default form value: "\"\"" | "0" | "false"
 	Zod         string // zod schema fragment
 	InputType   string // HTML input type: "text" | "number" | "checkbox"
@@ -102,6 +103,7 @@ func BuildModelView(modulePath string, m *spec.Model, migrationSeq int) (*ModelV
 			Required:  f.Required,
 			Unique:    f.Unique,
 			TSType:    f.Type.TSType,
+			TSOptional: f.Type.TSType == "unknown", // z.unknown()/z.any() infer optional
 			TSDefault: tsDefault(f.Type.TSType),
 			Zod:       zodFor(f.Type),
 			InputType: inputTypeFor(f.Type),

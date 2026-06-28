@@ -1,0 +1,21 @@
+// Package ports declares the interfaces the {{.Module}} module's services depend
+// on. They are consumer-defined contracts, implemented by the adapters.
+package ports
+
+import (
+	"context"
+
+	"github.com/google/uuid"
+
+	"{{.ModulePath}}/internal/modules/{{.ModulePkg}}/internal/domain"
+)
+
+// {{.Pascal}}Repository is the persistence contract for {{.Plural}}.
+type {{.Pascal}}Repository interface {
+	Create(ctx context.Context, in domain.Create{{.Pascal}}Input) (domain.{{.Pascal}}, error)
+	Get(ctx context.Context, id uuid.UUID) (domain.{{.Pascal}}, error)
+	List(ctx context.Context, limit, offset int32) ([]domain.{{.Pascal}}, error)
+	Count(ctx context.Context) (int64, error)
+	Update(ctx context.Context, id uuid.UUID, in domain.Update{{.Pascal}}Input) (domain.{{.Pascal}}, error)
+	Delete(ctx context.Context, id uuid.UUID) error
+}
