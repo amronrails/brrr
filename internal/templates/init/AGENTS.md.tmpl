@@ -136,8 +136,8 @@ web/src/
 ## Common commands
 
 ```sh
+make setup        # create .env, sqlc generate, go mod tidy, npm install
 make db-up        # start Postgres (docker compose)
-make setup        # go mod tidy + sqlc generate + npm install
 make migrate      # apply migrations (goose)
 make dev          # run backend (:{{.HTTPPort}}) and frontend (:5173) together
 make sqlc         # regenerate internal/db after changing migrations/queries

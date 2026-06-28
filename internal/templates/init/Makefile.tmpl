@@ -11,7 +11,15 @@ help: ## Show available targets
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-14s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: setup
-setup: tidy sqlc web-install ## Install all deps and generate code
+setup: env sqlc tidy web-install ## Install all deps and generate code
+
+.PHONY: env
+env: ## Create .env from .env.example if it does not exist
+	@test -f .env || { cp .env.example .env && echo "Created .env from .env.example"; }
+
+.PHONY: check-db
+check-db: ## Fail fast if DATABASE_URL is not set
+	@test -n "$(DATABASE_URL)" || { echo "ERROR: DATABASE_URL is not set. Run 'make env' (or copy .env.example to .env) and set DATABASE_URL."; exit 1; }
 
 .PHONY: tidy
 tidy: ## Resolve Go module dependencies
@@ -34,15 +42,15 @@ db-down: ## Stop Postgres
 	docker compose down
 
 .PHONY: migrate
-migrate: ## Apply all database migrations
+migrate: check-db ## Apply all database migrations
 	$(GOOSE) -dir db/migrations postgres "$(DATABASE_URL)" up
 
 .PHONY: migrate-down
-migrate-down: ## Roll back the most recent migration
+migrate-down: check-db ## Roll back the most recent migration
 	$(GOOSE) -dir db/migrations postgres "$(DATABASE_URL)" down
 
 .PHONY: run
-run: ## Run the backend server
+run: check-db ## Run the backend server
 	go run ./cmd/api
 
 .PHONY: web

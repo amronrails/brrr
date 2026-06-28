@@ -32,9 +32,9 @@ to register becomes the **admin**.
 ## Getting started
 
 ```sh
-cp .env.example .env       # then edit JWT_SECRET
+make setup                 # create .env, sqlc generate, go mod tidy, npm install
+# edit .env to set JWT_SECRET (and DATABASE_URL if not using docker)
 make db-up                 # start Postgres
-make setup                 # go mod tidy + sqlc generate + npm install
 make migrate               # create the schema
 make dev                   # run backend (:{{.HTTPPort}}) + frontend (:5173)
 ```

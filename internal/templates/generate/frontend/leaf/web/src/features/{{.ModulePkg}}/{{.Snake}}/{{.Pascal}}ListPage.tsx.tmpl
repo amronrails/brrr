@@ -1,11 +1,31 @@
+import { useState } from "react";
 import { Link } from "react-router-dom";
 import { use{{.PluralPascal}}, useDelete{{.Pascal}} } from "./hooks";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
+import { ConfirmDialog } from "@/components/ui/confirm-dialog";
+
+const PAGE_SIZE = 20;
 
 export function {{.Pascal}}ListPage() {
-  const { data, isLoading, isError } = use{{.PluralPascal}}();
+  const [page, setPage] = useState(0);
+  const [pendingId, setPendingId] = useState<string | null>(null);
+  const { data, isLoading, isError } = use{{.PluralPascal}}({
+    limit: PAGE_SIZE,
+    offset: page * PAGE_SIZE,
+  });
   const remove = useDelete{{.Pascal}}();
+
+  const columnCount = {{len .Columns}} + 1;
+  const total = data?.total ?? 0;
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const from = total === 0 ? 0 : page * PAGE_SIZE + 1;
+  const to = Math.min(total, (page + 1) * PAGE_SIZE);
+
+  function confirmDelete() {
+    if (!pendingId) return;
+    remove.mutate(pendingId, { onSettled: () => setPendingId(null) });
+  }
 
   return (
     <div className="flex flex-col gap-6">
@@ -43,7 +63,7 @@ export function {{.Pascal}}ListPage() {
                         Edit
                       </Link>
                       <button
-                        onClick={() => remove.mutate(item.id)}
+                        onClick={() => setPendingId(item.id)}
                         className="text-red-600 hover:underline"
                       >
                         Delete
@@ -52,10 +72,54 @@ export function {{.Pascal}}ListPage() {
                   </td>
                 </tr>
               ))}
+              {data && data.data.length === 0 ? (
+                <tr>
+                  <td colSpan={columnCount} className="px-4 py-6 text-center text-sm text-neutral-500">
+                    No {{.Plural}} yet.
+                  </td>
+                </tr>
+              ) : null}
             </tbody>
           </table>
         )}
       </Card>
+
+      <div className="flex items-center justify-between text-sm text-neutral-500">
+        <span>
+          {from}–{to} of {total}
+        </span>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page === 0}
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+          >
+            Previous
+          </Button>
+          <span>
+            Page {page + 1} of {pageCount}
+          </span>
+          <Button
+            variant="outline"
+            size="sm"
+            disabled={page + 1 >= pageCount}
+            onClick={() => setPage((p) => p + 1)}
+          >
+            Next
+          </Button>
+        </div>
+      </div>
+
+      <ConfirmDialog
+        open={pendingId !== null}
+        title="Delete {{.Pascal}}?"
+        description="This action cannot be undone."
+        confirmLabel="Delete"
+        loading={remove.isPending}
+        onConfirm={confirmDelete}
+        onCancel={() => setPendingId(null)}
+      />
     </div>
   );
 }

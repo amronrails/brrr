@@ -91,7 +91,7 @@ func newInitCmd() *cobra.Command {
 				}
 			}
 
-			fmt.Fprintf(out, "\nNext steps:\n  cd %s\n  make setup     # install deps & generate sqlc/migrations\n  make migrate   # apply migrations\n  make dev       # run backend + frontend\n", rel)
+			fmt.Fprintf(out, "\nNext steps:\n  cd %s\n  make setup     # create .env, generate sqlc, install deps\n  make db-up     # start Postgres (docker)\n  make migrate   # apply migrations\n  make dev       # run backend + frontend\n\nEdit .env to set JWT_SECRET before deploying.\n", rel)
 			return nil
 		},
 	}
